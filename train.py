@@ -16,13 +16,14 @@ softmax = nn.Softmax(dim=1)
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 def forward(sample_batched, model):
-    img, label, force = sample_batched
+    _, img, label, force = sample_batched
     img = Variable(img.cuda() if use_cuda else img)
     force = Variable(force.cuda() if use_cuda else force)
     pred_labels_logits = model.forward(img.float(), force.float())
+    pred_labels_logits = pred_labels_logits.view(-1,3)
     pred_labels_probs = softmax(pred_labels_logits)
     pred_label = torch.argmax(pred_labels_probs, dim=1)
-    label = label.squeeze()
+    label = label.view(-1)
     correct = (pred_label==label).sum()
     cls_loss = clsLoss(pred_labels_logits, label)
     return cls_loss, correct
@@ -60,9 +61,19 @@ def fit(train_data, test_data, model, epochs, checkpoint_path = ''):
 
 # dataset
 workers=0
-dataset_dir = 'hapticnet_dset_v0'
+dataset_dir = 'hapticnet_dset_v1'
 output_dir = 'checkpoints'
-save_dir = os.path.join(output_dir, dataset_dir)
+use_haptic = False
+use_rgb = True
+
+if use_haptic and use_rgb:
+    identifier = 'hapticvisual'
+elif use_haptic:
+    identifier = 'haptic'
+elif use_rgb:
+    identifier = 'visual'
+
+save_dir = os.path.join(output_dir, dataset_dir + '_' + identifier)
 
 if not os.path.exists(output_dir):
     os.mkdir(output_dir)
@@ -80,11 +91,13 @@ if use_cuda:
     torch.cuda.set_device(0)
 
 # model
-model = HapticVisualNet().cuda()
+#model = HapticVisualNet().cuda()
+model = HapticVisualNet(use_haptic=use_haptic, use_rgb=use_rgb).cuda()
 
 # optimizer
 optimizer_cls = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1.0e-4)
 
+print('dataset weights', train_dataset.weights)
 clsLoss = nn.CrossEntropyLoss(weight=train_dataset.weights.cuda())
 
 fit(train_data, test_data, model, epochs=epochs, checkpoint_path=save_dir)

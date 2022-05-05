@@ -29,8 +29,10 @@ class HapticNet(nn.Module):
         return [t.cuda() for t in (h0, c0)]
 
 class HapticVisualNet(nn.Module):
-	def __init__(self, rot_dim=3, channels=3, out_classes=3):
+	def __init__(self, rot_dim=3, channels=3, out_classes=3, use_haptic=True, use_rgb=True):
 		super(HapticVisualNet, self).__init__()
+		self.use_haptic = use_haptic
+		self.use_rgb = use_rgb
 		self.resnet = models.resnet18(pretrained=True)
 		self.resnet.conv1 = nn.Conv2d(channels, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
 		modules = list(self.resnet.children())[:-1]      # delete the last fc layer.
@@ -38,12 +40,23 @@ class HapticVisualNet(nn.Module):
 		self.resnet_out_dim = 512
 		self.haptic_out_dim = 128
 		self.haptic_net = HapticNet(26, 256, 3, 128)
-		self.linear = nn.Linear(self.resnet_out_dim + self.haptic_out_dim, out_features=out_classes)
+		if self.use_haptic and self.use_rgb:
+			out_feature_dim = self.resnet_out_dim + self.haptic_out_dim
+		elif self.use_haptic:
+			out_feature_dim = self.haptic_out_dim
+		elif self.use_rgb:
+			out_feature_dim = self.resnet_out_dim
+		self.linear = nn.Linear(out_feature_dim, out_features=out_classes)
 	def forward(self, img, force):
 		features_img = self.resnet(img)
 		features_img = features_img.reshape(features_img.size(0), -1)
 		features_force = self.haptic_net(force)
-		features = torch.cat((features_img, features_force), dim=1).squeeze()
+		if self.use_rgb and self.use_haptic:
+			features = torch.cat((features_img, features_force), dim=1).squeeze()
+		elif self.use_rgb:
+			features = features_img
+		elif self.use_haptic:
+			features = features_force
 		features = self.linear(features)
 		return features
 

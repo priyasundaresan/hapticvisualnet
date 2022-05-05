@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 import os
 
 class ClsAnnotator:
@@ -11,9 +12,20 @@ class ClsAnnotator:
         self.img = img
         self.vis = img.copy()
 
-    def run(self, img):
+    def run(self, img, force):
         self.load_image(img)
-        cv2.imshow('vis', self.vis)
+        #plt.show()
+
+        plt.plot(force)
+        plt.ylim(0,12)
+        fig.add_subplot(111)
+        fig.canvas.draw()
+        data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+        data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        data = cv2.resize(data, self.vis.shape[:-1])
+        plt.clf()
+
+        cv2.imshow('vis', np.hstack((self.vis, data)))
         res = cv2.waitKey(0)
         self.label = int(chr(res%256))
         return self.label
@@ -42,6 +54,8 @@ if __name__ == '__main__':
 
     i = 0
 
+    fig = plt.figure(figsize=(3,3))
+
     for f in sorted(os.listdir(image_dir)):
         print("Img %d"%i)
         image_path = os.path.join(image_dir, f)
@@ -53,7 +67,7 @@ if __name__ == '__main__':
         force_outpath = os.path.join(force_output_dir, '%05d.npy'%i)
         label_outpath = os.path.join(labels_output_dir, '%05d.npy'%i)
 
-        img_label = cls_selector.run(img)
+        img_label = cls_selector.run(img, force)
 
         print(force, cls_selector.labels_map[img_label])
         cv2.imwrite(image_outpath, img)
