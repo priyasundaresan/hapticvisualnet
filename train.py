@@ -1,4 +1,5 @@
 import pickle
+import matplotlib.pyplot as plt
 import numpy as np
 import time
 import os
@@ -20,7 +21,7 @@ def forward(sample_batched, model):
     img = Variable(img.cuda() if use_cuda else img)
     force = Variable(force.cuda() if use_cuda else force)
     pred_labels_logits = model.forward(img.float(), force.float())
-    pred_labels_logits = pred_labels_logits.view(-1,3)
+    pred_labels_logits = pred_labels_logits.view(-1,num_classes)
     pred_labels_probs = softmax(pred_labels_logits)
     pred_label = torch.argmax(pred_labels_probs, dim=1)
     label = label.view(-1)
@@ -29,6 +30,10 @@ def forward(sample_batched, model):
     return cls_loss, correct
 
 def fit(train_data, test_data, model, epochs, checkpoint_path = ''):
+    train_accs = []
+    train_losses = []
+    test_accs = []
+    test_losses = []
     for epoch in range(epochs):
         train_cls_loss = 0.0
         train_cls_correct = 0.0
@@ -46,8 +51,12 @@ def fit(train_data, test_data, model, epochs, checkpoint_path = ''):
                     correct.item()/batch_size), \
                     end='')
             print('\r', end='')
-        print('%d: train cls loss:'%(epoch), train_cls_loss/i_batch)
-        print('%d: train cls accuracy:'%(epoch), train_cls_correct/((i_batch+1)*batch_size))
+        train_loss = train_cls_loss/i_batch
+        train_acc = train_cls_correct/((i_batch+1)*batch_size)
+        print('%d: train cls loss:'%(epoch), train_loss)
+        print('%d: train cls accuracy:'%(epoch), train_acc)
+        train_losses.append(train_loss)
+        train_accs.append(train_acc)
         
         test_cls_loss = 0.0
         test_cls_correct = 0.0
@@ -55,15 +64,23 @@ def fit(train_data, test_data, model, epochs, checkpoint_path = ''):
             cls_loss, correct = forward(sample_batched, model)
             test_cls_loss += cls_loss.item()
             test_cls_correct += correct.item()
-        print('%d: test cls loss:'%(epoch), test_cls_loss/i_batch)
-        print('%d: test cls accuracy:'%(epoch), test_cls_correct/((i_batch+1)*batch_size))
-        torch.save(model.state_dict(), checkpoint_path + '/model_2_1_' + str(epoch) + '.pth')
+        test_loss = test_cls_loss/i_batch
+        test_acc = test_cls_correct/((i_batch+1)*batch_size)
+        print('%d: test cls loss:'%(epoch), test_loss)
+        print('%d: test cls accuracy:'%(epoch), test_acc)
+        torch.save(model.state_dict(), checkpoint_path + '/model_' + str(epoch) + '_%.2f_%.2f.pth'%(test_loss, test_acc))
+        test_losses.append(test_loss)
+        test_accs.append(test_acc)
+    return train_losses, train_accs, test_losses, test_accs
 
 # dataset
 workers=0
-dataset_dir = 'hapticnet_dset_v1'
+#dataset_dir = 'hapticnet_dset_v2'
+#dataset_dir = 'hapticvis_dset_v0v2_combo'
+#dataset_dir = 'hapticnet_dset_cheese'
+dataset_dir = 'hapticvis_dset_5_30'
 output_dir = 'checkpoints'
-use_haptic = False
+use_haptic = True
 use_rgb = True
 
 if use_haptic and use_rgb:
@@ -80,9 +97,9 @@ if not os.path.exists(output_dir):
 if not os.path.exists(save_dir):
     os.mkdir(save_dir)
 
-train_dataset = HapticVisualDataset('/host/datasets/%s/train'%dataset_dir, transform)
+train_dataset = HapticVisualDataset('/host/datasets/%s/train'%dataset_dir, transform, num_classes)
 train_data = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=workers)
-test_dataset = HapticVisualDataset('/host/datasets/%s/test'%dataset_dir, transform)
+test_dataset = HapticVisualDataset('/host/datasets/%s/test'%dataset_dir, transform, num_classes)
 test_data = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=workers)
 use_cuda = torch.cuda.is_available()
 
@@ -92,7 +109,7 @@ if use_cuda:
 
 # model
 #model = HapticVisualNet().cuda()
-model = HapticVisualNet(use_haptic=use_haptic, use_rgb=use_rgb).cuda()
+model = HapticVisualNet(use_haptic=use_haptic, use_rgb=use_rgb, out_classes=num_classes).cuda()
 
 # optimizer
 optimizer_cls = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1.0e-4)
@@ -100,4 +117,14 @@ optimizer_cls = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1.0e-4)
 print('dataset weights', train_dataset.weights)
 clsLoss = nn.CrossEntropyLoss(weight=train_dataset.weights.cuda())
 
-fit(train_data, test_data, model, epochs=epochs, checkpoint_path=save_dir)
+train_losses, train_accs, test_losses, test_accs = fit(train_data, test_data, model, epochs=epochs, checkpoint_path=save_dir)
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8,4))
+ax1.plot(train_losses)
+ax1.plot(test_losses)
+ax1.legend(['train', 'test'])
+ax1.set_title('Losses')
+ax2.plot(train_accs)
+ax2.plot(test_accs)
+ax1.legend(['train', 'test'])
+ax2.set_title('Accs')
+plt.savefig('%s/stats.jpg'%save_dir)

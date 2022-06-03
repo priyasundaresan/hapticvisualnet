@@ -7,6 +7,14 @@ import sys
 import torchvision.models as models
 sys.path.insert(0, '/host/src')
 
+def append_dropout(model, rate=0.2):
+    for name, module in model.named_children():
+        if len(list(module.children())) > 0:
+            append_dropout(module)
+        if isinstance(module, nn.ReLU):
+            new = nn.Sequential(module, nn.Dropout2d(p=rate))
+            setattr(model, name, new)
+
 class HapticNet(nn.Module):
     def __init__(self, input_dim, hidden_dim, layer_dim, output_dim):
         super().__init__()
@@ -30,23 +38,25 @@ class HapticNet(nn.Module):
 
 class HapticVisualNet(nn.Module):
 	def __init__(self, rot_dim=3, channels=3, out_classes=3, use_haptic=True, use_rgb=True):
-		super(HapticVisualNet, self).__init__()
-		self.use_haptic = use_haptic
-		self.use_rgb = use_rgb
-		self.resnet = models.resnet18(pretrained=True)
-		self.resnet.conv1 = nn.Conv2d(channels, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-		modules = list(self.resnet.children())[:-1]      # delete the last fc layer.
-		self.resnet = nn.Sequential(*modules)
-		self.resnet_out_dim = 512
-		self.haptic_out_dim = 128
-		self.haptic_net = HapticNet(26, 256, 3, 128)
-		if self.use_haptic and self.use_rgb:
-			out_feature_dim = self.resnet_out_dim + self.haptic_out_dim
-		elif self.use_haptic:
-			out_feature_dim = self.haptic_out_dim
-		elif self.use_rgb:
-			out_feature_dim = self.resnet_out_dim
-		self.linear = nn.Linear(out_feature_dim, out_features=out_classes)
+            super(HapticVisualNet, self).__init__()
+            self.use_haptic = use_haptic
+            self.use_rgb = use_rgb
+            self.resnet = models.resnet18(pretrained=True)
+            append_dropout(self.resnet)
+            
+            self.resnet.conv1 = nn.Conv2d(channels, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+            modules = list(self.resnet.children())[:-1]      # delete the last fc layer.
+            self.resnet = nn.Sequential(*modules)
+            self.resnet_out_dim = 512
+            self.haptic_out_dim = 128
+            self.haptic_net = HapticNet(26, 256, 3, 128)
+            if self.use_haptic and self.use_rgb:
+            	out_feature_dim = self.resnet_out_dim + self.haptic_out_dim
+            elif self.use_haptic:
+            	out_feature_dim = self.haptic_out_dim
+            elif self.use_rgb:
+            	out_feature_dim = self.resnet_out_dim
+            self.linear = nn.Linear(out_feature_dim, out_features=out_classes)
 	def forward(self, img, force):
 		features_img = self.resnet(img)
 		features_img = features_img.reshape(features_img.size(0), -1)
@@ -63,7 +73,7 @@ class HapticVisualNet(nn.Module):
 if __name__ == '__main__':
 	model = HapticVisualNet().cuda()
 	img_test = torch.rand((1,3,200,200)).cuda()
-	force_test = torch.rand((1,1,20)).cuda()
+	force_test = torch.rand((1,1,26)).cuda()
 	start = time.time()
 	result = model.forward(img_test,force_test)
 	end = time.time()

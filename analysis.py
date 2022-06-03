@@ -45,17 +45,22 @@ def run_inference(model, img, img_t, force_t, label_t, idx, output_dir='vis'):
 
 if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"]="0"
-    use_haptic = True
-    use_rgb = False
+    dataset_dir = 'hapticvis_dset_5_30'
+
+    use_haptic = False
+    use_rgb = True
     if use_haptic and use_rgb:
         identifier = 'hapticvisual'
     elif use_haptic:
         identifier = 'haptic'
     elif use_rgb:
         identifier = 'visual'
-    model = HapticVisualNet(use_haptic=use_haptic, use_rgb=use_rgb)
-    #model.load_state_dict(torch.load('/host/checkpoints/hapticnet_dset_v0/model_2_1_19.pth'))
-    model.load_state_dict(torch.load('/host/checkpoints/hapticnet_dset_v1_%s/model_2_1_18.pth'%identifier))
+
+
+    model = HapticVisualNet(use_haptic=use_haptic, use_rgb=use_rgb, out_classes=num_classes)
+    #model.load_state_dict(torch.load('/host/checkpoints/%s_%s/model_2_1_12.pth'%(dataset_dir, identifier)))
+    #model.load_state_dict(torch.load('/host/checkpoints/%s_%s/model_2_1_18.pth'%(dataset_dir, identifier)))
+    model.load_state_dict(torch.load('/host/checkpoints/%s_%s/model_2_1_40.pth'%(dataset_dir, identifier)))
     torch.cuda.set_device(0)
     model = model.cuda()
     model.eval()
@@ -64,8 +69,7 @@ if __name__ == '__main__':
         os.mkdir(output_dir)
 
     workers=0
-    dataset_dir = 'hapticnet_dset_v1'
-    test_dataset = HapticVisualDataset('/host/datasets/%s/test'%dataset_dir, transform)
+    test_dataset = HapticVisualDataset('/host/datasets/%s/test'%dataset_dir, transform, num_classes)
 
     vertical_skewer_correct = 0
     vertical_skewer_total = 0
@@ -88,5 +92,4 @@ if __name__ == '__main__':
         print("Annotating %06d"%idx)
     print('Vert Skew Accuracy %:', vertical_skewer_correct/vertical_skewer_total)
     print('Ang Skew Accuracy %:', angled_skewer_correct/angled_skewer_total)
-    print('Fail Accuracy %:', fail_correct/fail_total)
     print('Overall Accuracy %:', (fail_correct+vertical_skewer_correct+angled_skewer_correct)/(vertical_skewer_total+angled_skewer_total+fail_total))
