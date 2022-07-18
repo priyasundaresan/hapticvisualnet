@@ -42,7 +42,7 @@ class HapticVisualNet(nn.Module):
             self.use_haptic = use_haptic
             self.use_rgb = use_rgb
             self.resnet = models.resnet18(pretrained=True)
-            append_dropout(self.resnet)
+            #append_dropout(self.resnet)
             
             self.resnet.conv1 = nn.Conv2d(channels, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
             modules = list(self.resnet.children())[:-1]      # delete the last fc layer.

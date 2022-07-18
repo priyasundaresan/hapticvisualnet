@@ -1,4 +1,5 @@
 import pickle
+import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import time
@@ -78,17 +79,28 @@ workers=0
 #dataset_dir = 'hapticnet_dset_v2'
 #dataset_dir = 'hapticvis_dset_v0v2_combo'
 #dataset_dir = 'hapticnet_dset_cheese'
-dataset_dir = 'hapticvis_dset_5_30'
+#dataset_dir = 'hapticvis_dset_combo'
+#dataset_dir = 'hapticnet_dset_6_5_22'
+dataset_dir = 'hapticnet_dset_6_10'
 output_dir = 'checkpoints'
-use_haptic = True
-use_rgb = True
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--use_haptic', action='store_true')
+parser.add_argument('--use_rgb', action='store_true')
+args = parser.parse_args()
+
+#use_haptic = True
+#use_rgb = False
+
+use_haptic = args.use_haptic
+use_rgb = args.use_rgb
 
 if use_haptic and use_rgb:
-    identifier = 'hapticvisual'
+    identifier = 'hapticvisual_nodo'
 elif use_haptic:
-    identifier = 'haptic'
+    identifier = 'haptic_nodo'
 elif use_rgb:
-    identifier = 'visual'
+    identifier = 'visual_nodo'
 
 save_dir = os.path.join(output_dir, dataset_dir + '_' + identifier)
 

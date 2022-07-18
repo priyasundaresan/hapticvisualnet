@@ -1,4 +1,9 @@
-FROM nvidia/cuda:8.0-cudnn5-devel-ubuntu16.04
+FROM nvidia/cuda:10.0-base-ubuntu18.04
+
+RUN apt-key del 7fa2af80
+RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+RUN rm /etc/apt/sources.list.d/*
+RUN apt-get clean 
 
 # Install system packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -29,7 +34,7 @@ RUN pip install --upgrade pip && \
         torch==1.4.0 \
         opencv_python==3.4.2.17 \
         numpy \
-        torchvision==0.5.0\
+        torchvision==0.5.0 \
         Cython \
         matplotlib 
 

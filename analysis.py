@@ -45,10 +45,12 @@ def run_inference(model, img, img_t, force_t, label_t, idx, output_dir='vis'):
 
 if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"]="0"
-    dataset_dir = 'hapticvis_dset_5_30'
+    #dataset_dir = 'hapticnet_dset_6_5_22'
+    dataset_dir = 'butternut_test'
 
-    use_haptic = False
-    use_rgb = True
+    use_haptic = True
+    use_rgb = False
+
     if use_haptic and use_rgb:
         identifier = 'hapticvisual'
     elif use_haptic:
@@ -58,9 +60,13 @@ if __name__ == '__main__':
 
 
     model = HapticVisualNet(use_haptic=use_haptic, use_rgb=use_rgb, out_classes=num_classes)
-    #model.load_state_dict(torch.load('/host/checkpoints/%s_%s/model_2_1_12.pth'%(dataset_dir, identifier)))
-    #model.load_state_dict(torch.load('/host/checkpoints/%s_%s/model_2_1_18.pth'%(dataset_dir, identifier)))
-    model.load_state_dict(torch.load('/host/checkpoints/%s_%s/model_2_1_40.pth'%(dataset_dir, identifier)))
+    #model.load_state_dict(torch.load('/host/checkpoints/%s_%s/model_22_0.45_0.84.pth'%(dataset_dir, identifier))) # hapticvisual
+    #model.load_state_dict(torch.load('/host/checkpoints/%s_%s/model_22_0.43_0.82.pth'%(dataset_dir, identifier))) # visual
+
+    #model.load_state_dict(torch.load('/host/checkpoints/hapticnet_dset_6_5_22_hapticvisual_nodo/model_15_0.20_0.92.pth')) 
+    model.load_state_dict(torch.load('/host/checkpoints/hapticnet_dset_6_5_22_haptic_nodo/model_16_0.66_0.73.pth')) 
+    #model.load_state_dict(torch.load('/host/checkpoints/hapticnet_dset_6_5_22_visual_nodo/model_20_0.17_0.94.pth'))
+
     torch.cuda.set_device(0)
     model = model.cuda()
     model.eval()
@@ -69,7 +75,8 @@ if __name__ == '__main__':
         os.mkdir(output_dir)
 
     workers=0
-    test_dataset = HapticVisualDataset('/host/datasets/%s/test'%dataset_dir, transform, num_classes)
+    #test_dataset = HapticVisualDataset('/host/datasets/%s/test'%dataset_dir, transform, num_classes)
+    test_dataset = HapticVisualDataset('/host/%s'%dataset_dir, transform, num_classes)
 
     vertical_skewer_correct = 0
     vertical_skewer_total = 0

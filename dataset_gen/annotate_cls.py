@@ -6,7 +6,8 @@ import os
 class ClsAnnotator:
     def __init__(self, num_classes=3):
         self.num_classes = num_classes
-        self.labels_map = {1: 'vertical skewer', 2:'angled skewer', 3:'failure'}
+        #self.labels_map = {1: 'vertical skewer', 2:'angled skewer', 3:'failure'}
+        self.labels_map = {1: 'vertical skewer', 2:'angled skewer'}
 
     def load_image(self, img):
         self.img = img
@@ -28,15 +29,18 @@ class ClsAnnotator:
         cv2.imshow('vis', np.hstack((self.vis, data)))
         res = cv2.waitKey(0)
         self.label = int(chr(res%256))
-        return self.label
+
+        if self.label in self.labels_map:
+            return self.label
+        print('SKIPPED')
+        return None
 
 if __name__ == '__main__':
     cls_selector = ClsAnnotator(num_classes=3)
 
-    image_dir = 'images' # Should have images like 00000.jpg, 00001.jpg, ...
-    force_dir = 'force' # Should have images like 00000.jpg, 00001.jpg, ...
-
-    output_dir = 'real_data' # Will have real_data/images and real_data/keypoints
+    image_dir = 'images' 
+    force_dir = 'force' 
+    output_dir = 'real_data' 
 
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
@@ -68,9 +72,9 @@ if __name__ == '__main__':
         label_outpath = os.path.join(labels_output_dir, '%05d.npy'%i)
 
         img_label = cls_selector.run(img, force)
-
-        print(force, cls_selector.labels_map[img_label])
-        cv2.imwrite(image_outpath, img)
-        np.save(force_outpath, force)
-        np.save(label_outpath, img_label)
-        i+= 1
+        if img_label is not None:
+            print(force, cls_selector.labels_map[img_label])
+            cv2.imwrite(image_outpath, img)
+            np.save(force_outpath, force)
+            np.save(label_outpath, img_label)
+            i+= 1

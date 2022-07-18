@@ -25,7 +25,10 @@ if __name__ == '__main__':
         if not os.path.exists(d):
             os.mkdir(d)
 
-    inp_data_dir = 'hapticnet_data_v0'
+    #inp_data_dir = 'hapticnet_data_v0'
+    #inp_data_dir = 'hapticnet_data_v2'
+    inp_data_dir = 'hapticnet_data_combo'
+
     inp_img_dir = os.path.join(inp_data_dir, 'images')
     inp_force_dir = os.path.join(inp_data_dir, 'force')
     file_idxs = list(range(len(os.listdir(inp_img_dir))))
